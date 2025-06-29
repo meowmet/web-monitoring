@@ -1,6 +1,6 @@
 Secure Check - Educational Email Security Demonstration Project
 
-⚠️ ##IMPORTANT: This project is strictly for educational purposes only. It is designed to demonstrate concepts related to email security and web application development. Any misuse, unauthorized use, or distribution of this project for malicious purposes is strictly prohibited and illegal. The developers are not responsible for any misuse of this code.
+⚠️ ## IMPORTANT: This project is strictly for educational purposes only. It is designed to demonstrate concepts related to email security and web application development. Any misuse, unauthorized use, or distribution of this project for malicious purposes is strictly prohibited and illegal. The developers are not responsible for any misuse of this code.
 Overview
 Secure Check is an educational project that simulates an email security checking platform. The project includes a web interface for users to check the "security" of their email addresses, a backend server to handle requests, and a dashboard for viewing simulated data. The goal is to demonstrate common web development techniques, email handling, and potential security vulnerabilities in a controlled, educational environment.
 This project includes HTML pages for user interaction, a Node.js backend with Express for handling API requests, and Nodemailer for sending emails. It is intended to help developers and students understand the basics of web development, server-side programming, and email integration.
