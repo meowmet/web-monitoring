@@ -146,7 +146,6 @@ CORS Restrictions: The backend is configured to allow requests from specific ori
 ⚠️Disclaimer⚠️
 This project is for educational purposes only. It demonstrates how a web application with email functionality might be built. Any attempt to use this code for malicious purposes, such as phishing, data theft, or distributing malware, is illegal and unethical. The developers are not responsible for any misuse of this code. Always adhere to legal and ethical guidelines when developing or deploying web applications.
 License
-This project is licensed under the MIT License for educational use. See the LICENSE file for details.
-Contact
-For questions or feedback about this educational project, please contact the project maintainers at [your-educational-contact-email].
+This project is licensed under the MIT License for educational use. See the [MIT License](https://github.com/meowmet/web-monitoring/blob/main/LICENSE) file for details.
+
 ⚠️ Reminder: Use this project responsibly and ethically. It is intended for learning purposes only.
