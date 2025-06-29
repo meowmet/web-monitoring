@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>404 - Hacker Cat Lost in Space</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #0f0; 
+      color: #000; 
+      font-family: 'Courier New', Courier, monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+   
+    h1 {
+      font-size: 8rem;
+      position: relative;
+      margin: 1rem 0; 
+    }
+    h1::before,
+    h1::after {
+      content: "404";
+      position: absolute;
+      top: 0;
+      left: 0;
+      opacity: 0.6;
+    }
+    h1::before {
+      color: #f00;
+      z-index: -1;
+      animation: glitch1 2s infinite;
+    }
+    h1::after {
+      color: #0ff;
+      z-index: -2;
+      animation: glitch2 3s infinite;
+    }
+    @keyframes glitch1 {
+      0% { transform: translate(0); }
+      25% { transform: translate(-3px, 3px); }
+      50% { transform: translate(-3px, -3px); }
+      75% { transform: translate(3px, 3px); }
+      100% { transform: translate(0); }
+    }
+    @keyframes glitch2 {
+      0% { transform: translate(0); }
+      20% { transform: translate(3px, -3px); }
+      40% { transform: translate(3px, 3px); }
+      60% { transform: translate(-3px, -3px); }
+      80% { transform: translate(-3px, 3px); }
+      100% { transform: translate(0); }
+    }
+    .cat {
+      white-space: pre;
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+    p {
+      font-size: 1.25rem;
+      margin: 0.5rem 0;
+      text-align: center;
+    }
+    a {
+      display: inline-block;
+      margin-top: 1rem;
+      padding: 0.5rem 1rem;
+      color: #000;
+      background: #fff; 
+      text-decoration: none;
+      border-radius: 4px;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+    a:hover {
+      background: #ccc;
+    }
+    .gif-container {
+      margin-bottom: 1rem; 
+    }
+    .gif-container img {
+      max-width: 100%;
+      height: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="gif-container">
+    <img src="https://camo.githubusercontent.com/21140e99923762e27369292c9a046f21f916d55cf46ad3696b8bd585fd92bd12/68747470733a2f2f6d65646961312e74656e6f722e636f6d2f6d2f504c49725f566b4636797741414141642f67686f7374656476706e2d6861636b65722d6361742e676966" alt="Hacker Cat GIF">
+  </div>
+  <h1>404</h1>
+  <p>Oops! We can't locate that page</p>
+  <a href="/login.html">Take me home</a>
+</body>
+</html>

